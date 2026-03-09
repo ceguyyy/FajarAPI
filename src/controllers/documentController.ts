@@ -7,8 +7,27 @@ import { sendToSap } from '../services/sapService';
 
 export const receiveDocument = async (req: Request, res: Response) => {
     try {
-        // Some webhooks wrap the payload and stringify it
-        let payload = req.body;
+        let payload: any;
+
+        // Sometimes Vercel passes unparsed bodies as raw Buffers if the Content-Type is missing
+        if (Buffer.isBuffer(req.body)) {
+            try {
+                payload = JSON.parse(req.body.toString('utf8'));
+            } catch (e) {
+                payload = req.body.toString('utf8');
+            }
+        }
+        // If it's a string, try to parse it
+        else if (typeof req.body === 'string') {
+            try {
+                payload = JSON.parse(req.body);
+            } catch (e) {
+                payload = req.body;
+            }
+        }
+        else {
+            payload = req.body;
+        }
 
         // If webhooks send { body_raw: "{\"data\":...}" }
         if (payload?.body_raw && typeof payload.body_raw === 'string') {
