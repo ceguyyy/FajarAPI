@@ -32,7 +32,13 @@ export const receiveDocument = async (req: Request, res: Response) => {
         }
 
         if (!payload || !payload.doc_type) {
-            return res.status(400).json({ error: 'Missing doc_type in payload' });
+            return res.status(400).json({
+                error: 'Missing doc_type in payload',
+                received_body_type: typeof req.body,
+                received_body_keys: req.body ? Object.keys(req.body) : [],
+                received_payload_keys: payload ? Object.keys(payload) : [],
+                raw_body_excerpt: JSON.stringify(req.body || {}).substring(0, 500)
+            });
         }
 
         const doc_type = payload.doc_type;
