@@ -1,45 +1,55 @@
-import { Client } from 'node-rfc';
-
 export const sendToSap = async (bapiName: string, payload: any) => {
     try {
-        console.log(`[SAP RFC CLIENT] Connecting to SAP for BAPI: ${bapiName}`);
+        console.log(`[SAP HTTP CLIENT] Calling BAPI Endpoint: ${bapiName}`);
 
-        // Construct SAP connection parameters from environment variables
-        const connectionParams = {
-            ashost: process.env.SAP_ASHOST || '192.168.1.100',
-            sysnr: process.env.SAP_SYSNR || '00',
-            client: process.env.SAP_CLIENT || '100',
-            user: process.env.SAP_USER || 'RFC_USER',
-            passwd: process.env.SAP_PASSWORD || 'password'
+        // Construct SAP Gateway URL
+        const sapHost = process.env.SAP_ASHOST || 'http://localhost:8000';
+
+        let endpointUrl = `${sapHost}/sap/opu/odata/sap/Z_OCR_INTEGRATION_SRV/ImportDocument`;
+
+        const username = process.env.SAP_USER || '';
+        const password = process.env.SAP_PASSWORD || '';
+
+        // Create Basic Auth header
+        const authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+
+        console.log(`[SAP HTTP CLIENT] POST to: ${endpointUrl}`);
+
+        // Wrap the payload with the target BAPI name so the single SAP endpoint knows what to do
+        const wrappedPayload = {
+            bapi_name: bapiName,
+            data: payload
         };
 
-        // Initialize SAP RFC Client
-        const client = new Client(connectionParams);
+        // Execute HTTP REST/OData call to SAP Gateway
+        const response = await fetch(endpointUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': authHeader
+            },
+            body: JSON.stringify(wrappedPayload)
+        });
 
-        // Open connection to SAP ECC
-        await client.open();
-        console.log(`[SAP RFC CLIENT] Connected successfully.`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`SAP HTTP Error ${response.status}: ${errorText}`);
+        }
 
-        console.log(`[SAP RFC CLIENT] Executing ${bapiName}...`);
-
-        // Execute the BAPI function in SAP
-        const result = await client.call(bapiName, payload);
-
-        console.log('[SAP RFC CLIENT] Result received from SAP.');
-
-        // Close the connection
-        await client.close();
-
+        const result = await response.json();
+        console.log('[SAP HTTP CLIENT] Result:', result);
         return result;
 
     } catch (error: any) {
-        console.error('Error executing SAP RFC:', error.message || error);
+        console.error('Error calling SAP REST endpoint:', error.message || error);
 
         // Return a clean error object instead of throwing so documentController can render it
         return {
             sapError: true,
-            status: "Failed to connect to SAP via RFC",
-            details: error.message || String(error)
+            status: "Failed to connect to SAP Gateway",
+            details: error.message || String(error),
+            attemptedEndpoint: `${process.env.SAP_ASHOST || 'http://localhost'}/sap/opu/odata/sap/Z_OCR_INTEGRATION_SRV/ImportDocument`
         };
     }
 };
