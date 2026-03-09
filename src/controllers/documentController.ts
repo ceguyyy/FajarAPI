@@ -7,7 +7,8 @@ import { sendToSap } from '../services/sapService';
 
 export const receiveDocument = async (req: Request, res: Response) => {
     try {
-        const payload = req.body;
+        // Some webhooks wrap the payload in a 'body' property
+        const payload = req.body.body || req.body;
 
         if (!payload || !payload.doc_type) {
             return res.status(400).json({ error: 'Missing doc_type in payload' });
