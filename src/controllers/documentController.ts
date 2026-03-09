@@ -7,10 +7,27 @@ import { sendToSap } from '../services/sapService';
 
 export const receiveDocument = async (req: Request, res: Response) => {
     try {
-        // Some webhooks wrap the payload in a 'body' property
+        // Some webhooks wrap the payload and stringify it
         let payload = req.body;
-        if (payload.body) {
-            // It could be double wrapped depending on the webhook provider
+
+        // If webhooks send { body_raw: "{\"data\":...}" }
+        if (payload?.body_raw && typeof payload.body_raw === 'string') {
+            try {
+                payload = JSON.parse(payload.body_raw);
+            } catch (e) {
+                console.error("Failed to parse body_raw", e);
+            }
+        }
+        // If webhooks send { body: "{\"data\":...}" }
+        else if (payload?.body && typeof payload.body === 'string') {
+            try {
+                payload = JSON.parse(payload.body);
+            } catch (e) {
+                console.error("Failed to parse body string", e);
+            }
+        }
+        // If webhooks send { body: { data: ... } }
+        else if (payload?.body && typeof payload.body === 'object') {
             payload = payload.body;
         }
 
