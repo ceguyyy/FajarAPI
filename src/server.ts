@@ -9,8 +9,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json());
-
+// Parse application/json as well as any payload that is just dumped as text
+app.use(express.json({ type: ['application/json', 'text/plain', '*/*'] }));
 // Main API Route
 app.use('/api', documentRoutes);
 
