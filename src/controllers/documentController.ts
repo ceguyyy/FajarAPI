@@ -100,14 +100,14 @@ export const receiveDocument = async (req: Request, res: Response) => {
         }
 
         // Call SAP Service
-        // const sapResponse = await sendToSap(bapiName, bapiPayload);
+        const sapResponse = await sendToSap(bapiName, bapiPayload);
 
         return res.status(200).json({
             message: 'Document successfully processed and mapped',
             doc_type,
             bapiName,
             bapiPayload,
-            // sapResponse
+            sapResponse
         });
 
     } catch (error) {
