@@ -8,25 +8,34 @@ import { sendToSap } from '../services/sapService';
 export const receiveDocument = async (req: Request, res: Response) => {
     try {
         let payload: any;
+        let rawBody = '';
 
-        // Sometimes Vercel passes unparsed bodies as raw Buffers if the Content-Type is missing
-        if (Buffer.isBuffer(req.body)) {
-            try {
-                payload = JSON.parse(req.body.toString('utf8'));
-            } catch (e) {
-                payload = req.body.toString('utf8');
-            }
-        }
-        // If it's a string, try to parse it
-        else if (typeof req.body === 'string') {
-            try {
-                payload = JSON.parse(req.body);
-            } catch (e) {
+        // Safely extract the body stream, especially in Vercel serverless environments
+        if (req.body && Object.keys(req.body).length > 0) {
+            payload = req.body;
+        } else {
+            // Read from the raw stream if req.body is empty
+            await new Promise<void>((resolve, reject) => {
+                req.on('data', chunk => {
+                    rawBody += chunk.toString();
+                });
+                req.on('end', () => {
+                    resolve();
+                });
+                req.on('error', (err) => {
+                    reject(err);
+                });
+            });
+
+            if (rawBody) {
+                try {
+                    payload = JSON.parse(rawBody);
+                } catch (e) {
+                    payload = rawBody; // Keep as string if not JSONifiable
+                }
+            } else {
                 payload = req.body;
             }
-        }
-        else {
-            payload = req.body;
         }
 
         // If webhooks send { body_raw: "{\"data\":...}" }
@@ -56,6 +65,7 @@ export const receiveDocument = async (req: Request, res: Response) => {
                 received_body_type: typeof req.body,
                 received_body_keys: req.body ? Object.keys(req.body) : [],
                 received_payload_keys: payload ? Object.keys(payload) : [],
+                raw_body_extracted_from_stream: rawBody.substring(0, 500) || "none",
                 raw_body_excerpt: JSON.stringify(req.body || {}).substring(0, 500)
             });
         }

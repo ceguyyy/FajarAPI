@@ -10,19 +10,11 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 
-// Vercel Serverless Functions automatically parse the body and consume the stream.
-// If we use express.json(), it will read an empty stream and overwrite req.body to undefined.
-app.use((req, res, next) => {
-    if (req.body !== undefined) {
-        // Vercel already parsed it! Just proceed.
-        return next();
-    }
-    // Otherwise, we are running locally, so use Express parsers
-    express.json({ type: ['application/json', 'text/plain', '*/*'] })(req, res, (err) => {
-        if (err) return next(err);
-        express.urlencoded({ extended: true })(req, res, next);
-    });
-});
+// Parse application/json, text/plain, and URL-encoded payloads
+app.use(express.json({ type: ['application/json', 'text/plain', 'application/vnd.api+json'] }));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.text({ type: '*/*' }));
+app.use(express.raw({ type: '*/*' }));
 // Main API Route
 app.use('/api', documentRoutes);
 
