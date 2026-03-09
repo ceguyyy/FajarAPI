@@ -41,8 +41,15 @@ export const sendToSap = async (bapiName: string, payload: any) => {
         console.log('[SAP HTTP CLIENT] Result:', result);
         return result;
 
-    } catch (error) {
-        console.error('Error calling SAP REST endpoint', error);
-        throw error;
+    } catch (error: any) {
+        console.error('Error calling SAP REST endpoint:', error.message || error);
+
+        // Return a clean error object instead of throwing so documentController can render it
+        return {
+            sapError: true,
+            status: "Failed to connect to SAP Gateway",
+            details: error.message || String(error),
+            attemptedEndpoint: `${process.env.SAP_ASHOST || 'http://localhost'}/sap/opu/odata/sap/Z_OCR_INTEGRATION_SRV/ImportDocument`
+        };
     }
 };
