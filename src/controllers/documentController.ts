@@ -8,13 +8,21 @@ import { sendToSap } from '../services/sapService';
 export const receiveDocument = async (req: Request, res: Response) => {
     try {
         // Some webhooks wrap the payload in a 'body' property
-        const payload = req.body.body || req.body;
+        let payload = req.body;
+        if (payload.body) {
+            // It could be double wrapped depending on the webhook provider
+            payload = payload.body;
+        }
 
         if (!payload || !payload.doc_type) {
             return res.status(400).json({ error: 'Missing doc_type in payload' });
         }
 
-        const { doc_type, data } = payload;
+        const doc_type = payload.doc_type;
+        // Sometimes the actual OCR data is nested inside 'data', sometimes it's at the root.
+        // E.g., The payload shows: { "data": { "nomor_invoice": "..." }, "doc_type": "invoice" }
+        const data = payload.data || payload;
+
         let bapiPayload: any;
         let bapiName: string;
 
