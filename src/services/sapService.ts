@@ -5,13 +5,7 @@ export const sendToSap = async (bapiName: string, payload: any) => {
         // Construct SAP Gateway URL
         const sapHost = process.env.SAP_ASHOST || 'http://localhost:8000';
 
-        let endpointUrl = '';
-        if (bapiName === 'BAPI_INCOMINGINVOICE_CREATE1') {
-            endpointUrl = `${sapHost}/sap/opu/odata/sap/z_bapi_invoice`; // Example given by user
-        } else {
-            // Default dynamic route
-            endpointUrl = `${sapHost}/sap/opu/odata/sap/Z_OCR_INTEGRATION_SRV/${bapiName}`;
-        }
+        let endpointUrl = `${sapHost}/sap/opu/odata/sap/Z_OCR_INTEGRATION_SRV/ImportDocument`;
 
         const username = process.env.SAP_USER || '';
         const password = process.env.SAP_PASSWORD || '';
@@ -21,6 +15,12 @@ export const sendToSap = async (bapiName: string, payload: any) => {
 
         console.log(`[SAP HTTP CLIENT] POST to: ${endpointUrl}`);
 
+        // Wrap the payload with the target BAPI name so the single SAP endpoint knows what to do
+        const wrappedPayload = {
+            bapi_name: bapiName,
+            data: payload
+        };
+
         // Execute HTTP REST/OData call to SAP Gateway
         const response = await fetch(endpointUrl, {
             method: 'POST',
@@ -29,7 +29,7 @@ export const sendToSap = async (bapiName: string, payload: any) => {
                 'Accept': 'application/json',
                 'Authorization': authHeader
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(wrappedPayload)
         });
 
         if (!response.ok) {
